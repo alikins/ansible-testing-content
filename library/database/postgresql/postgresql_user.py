@@ -41,10 +41,12 @@ options:
     description:
       - set the user's password, before 1.4 this was required.
       - >
-        When passing an encrypted password, the encrypted parameter must also be true, and it must be generated with the format
-        C('str[\\"md5\\"] + md5[ password + username ]'), resulting in a total of 35 characters.  An easy way to do this is:
-        C(echo \\"md5`echo -n \\"verysecretpasswordJOE\\" | md5`\\"). Note that if the provided password string is already in
-        MD5-hashed format, then it is used as-is, regardless of encrypted parameter.
+        When passing an encrypted password, the encrypted parameter must also be true, and it
+        must be generated with the format C('str[\\"md5\\"] + md5[ password + username ]'),
+        resulting in a total of 35 characters.  An easy way to do this is:
+        C(echo \\"md5`echo -n \\"verysecretpasswordJOE\\" | md5`\\"). Note that if the provided
+        password string is already in MD5-hashed format, then it is used as-is, regardless of
+        encrypted parameter.
     default: null
   db:
     description:
@@ -54,7 +56,7 @@ options:
     description:
       - if C(yes), fail when user can't be removed. Otherwise just log and continue
     default: 'yes'
-    choices: [ "yes", "no" ]
+    choices: [ yes, no ]
   port:
     description:
       - Database port to connect to.
@@ -82,18 +84,19 @@ options:
   role_attr_flags:
     description:
       - "PostgreSQL role attributes string in the format: CREATEDB,CREATEROLE,SUPERUSER"
+      - Note that '[NO]CREATEUSER' is deprecated.
     default: ""
-    choices: [ "[NO]SUPERUSER","[NO]CREATEROLE", "[NO]CREATEUSER", "[NO]CREATEDB",
-                    "[NO]INHERIT", "[NO]LOGIN", "[NO]REPLICATION", "[NO]BYPASSRLS" ]
+    choices: [ "[NO]SUPERUSER", "[NO]CREATEROLE", "[NO]CREATEDB", "[NO]INHERIT", "[NO]LOGIN",
+               "[NO]REPLICATION", "[NO]BYPASSRLS" ]
   state:
     description:
       - The user (role) state
     default: present
-    choices: [ "present", "absent" ]
+    choices: [ present, absent ]
   encrypted:
     description:
-      - whether the password is stored hashed in the database. boolean. Passwords can be passed already hashed or unhashed, and postgresql ensures the
-        stored password is hashed when encrypted is set.
+      - whether the password is stored hashed in the database. boolean. Passwords can be passed already
+        hashed or unhashed, and postgresql ensures the stored password is hashed when encrypted is set.
     default: false
     version_added: '1.4'
   expires:
@@ -105,10 +108,10 @@ options:
     version_added: '1.4'
   no_password_changes:
     description:
-      - if C(yes), don't inspect database for password changes. Effective when C(pg_authid) is not accessible (such as AWS RDS). Otherwise, make
-        password changes as necessary.
+      - if C(yes), don't inspect database for password changes. Effective when C(pg_authid) is not
+        accessible (such as AWS RDS). Otherwise, make password changes as necessary.
     default: 'no'
-    choices: [ "yes", "no" ]
+    choices: [ yes, no ]
     version_added: '2.0'
   ssl_mode:
     description:
@@ -120,8 +123,8 @@ options:
     version_added: '2.3'
   ssl_rootcert:
     description:
-      - Specifies the name of a file containing SSL certificate authority (CA) certificate(s). If the file exists, the server's certificate will be
-        verified to be signed by one of these authorities.
+      - Specifies the name of a file containing SSL certificate authority (CA) certificate(s). If the file
+        exists, the server's certificate will be verified to be signed by one of these authorities.
     default: null
     version_added: '2.3'
   conn_limit:
@@ -216,18 +219,18 @@ from ansible.module_utils._text import to_bytes, to_native
 from ansible.module_utils.six import iteritems
 
 
-FLAGS = ('SUPERUSER', 'CREATEROLE', 'CREATEUSER', 'CREATEDB', 'INHERIT', 'LOGIN', 'REPLICATION')
+FLAGS = ('SUPERUSER', 'CREATEROLE', 'CREATEDB', 'INHERIT', 'LOGIN', 'REPLICATION')
 FLAGS_BY_VERSION = {'BYPASSRLS': 90500}
 
-VALID_PRIVS = dict(table=frozenset(('SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'ALL')),
+VALID_PRIVS = dict(table=frozenset(('SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES',
+                                    'TRIGGER', 'ALL')),
                    database=frozenset(
                        ('CREATE', 'CONNECT', 'TEMPORARY', 'TEMP', 'ALL')),
                    )
 
 # map to cope with idiosyncracies of SUPERUSER and LOGIN
 PRIV_TO_AUTHID_COLUMN = dict(SUPERUSER='rolsuper', CREATEROLE='rolcreaterole',
-                             CREATEUSER='rolcreateuser', CREATEDB='rolcreatedb',
-                             INHERIT='rolinherit', LOGIN='rolcanlogin',
+                             CREATEDB='rolcreatedb', INHERIT='rolinherit', LOGIN='rolcanlogin',
                              REPLICATION='rolreplication', BYPASSRLS='rolbypassrls')
 
 
@@ -303,7 +306,8 @@ def user_should_we_change_password(current_role_attrs, user, password, encrypted
     return pwchanging
 
 
-def user_alter(db_connection, module, user, password, role_attr_flags, encrypted, expires, no_password_changes, conn_limit):
+def user_alter(db_connection, module, user, password, role_attr_flags, encrypted, expires,
+               no_password_changes, conn_limit):
     """Change user password and/or attributes. Return True if changed, False otherwise."""
     changed = False
 
@@ -319,7 +323,8 @@ def user_alter(db_connection, module, user, password, role_attr_flags, encrypted
             return False
 
     # Handle passwords.
-    if not no_password_changes and (password is not None or role_attr_flags != '' or expires is not None or conn_limit is not None):
+    if not no_password_changes and (password is not None or role_attr_flags != '' or
+       expires is not None or conn_limit is not None):
         # Select password and all flag-like columns in order to verify changes.
         try:
             select = "SELECT * FROM pg_authid where rolname=%(user)s"
@@ -331,6 +336,18 @@ def user_alter(db_connection, module, user, password, role_attr_flags, encrypted
             db_connection.rollback()
 
         pwchanging = user_should_we_change_password(current_role_attrs, user, password, encrypted)
+
+        if current_role_attrs is None:
+            try:
+                # AWS RDS instances does not allow user to access pg_authid
+                # so try to get current_role_attrs from pg_roles tables
+                select = "SELECT * FROM pg_roles where rolname=%(user)s"
+                cursor.execute(select, {"user": user})
+                # Grab current role attributes from pg_roles
+                current_role_attrs = cursor.fetchone()
+            except psycopg2.ProgrammingError as e:
+                db_connection.rollback()
+                module.fail_json(msg="Failed to get role details for current user %s: %s" % (user, e))
 
         role_attr_flags_changing = False
         if role_attr_flags:
@@ -439,7 +456,7 @@ def user_delete(cursor, user):
     cursor.execute("SAVEPOINT ansible_pgsql_user_delete")
     try:
         cursor.execute("DROP USER %s" % pg_quote_identifier(user, 'role'))
-    except:
+    except Exception:
         cursor.execute("ROLLBACK TO SAVEPOINT ansible_pgsql_user_delete")
         cursor.execute("RELEASE SAVEPOINT ansible_pgsql_user_delete")
         return False
@@ -607,11 +624,12 @@ def parse_role_attrs(cursor, role_attr_flags):
     Where:
 
         attributes := CREATEDB,CREATEROLE,NOSUPERUSER,...
-        [ "[NO]SUPERUSER","[NO]CREATEROLE", "[NO]CREATEUSER", "[NO]CREATEDB",
+        [ "[NO]SUPERUSER","[NO]CREATEROLE", "[NO]CREATEDB",
                             "[NO]INHERIT", "[NO]LOGIN", "[NO]REPLICATION",
                             "[NO]BYPASSRLS" ]
 
     Note: "[NO]BYPASSRLS" role attribute introduced in 9.5
+    Note: "[NO]CREATEUSER" role attribute is deprecated.
 
     """
     flags = frozenset(role.upper() for role in role_attr_flags.split(',') if role)

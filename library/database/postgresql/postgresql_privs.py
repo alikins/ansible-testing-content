@@ -124,8 +124,8 @@ options:
     version_added: '2.3'
   ssl_rootcert:
     description:
-      - Specifies the name of a file containing SSL certificate authority (CA) certificate(s). If the file exists, the server's certificate will be
-        verified to be signed by one of these authorities.
+      - Specifies the name of a file containing SSL certificate authority (CA) certificate(s). If the
+        file exists, the server's certificate will be verified to be signed by one of these authorities.
     required: false
     default: null
     version_added: '2.3'
@@ -150,6 +150,8 @@ notes:
   - When revoking privileges, C(RESTRICT) is assumed (see PostgreSQL docs).
   - The ssl_rootcert parameter requires at least Postgres version 8.4 and I(psycopg2) version 2.4.3.
 requirements: [psycopg2]
+extends_documentation_fragment:
+  - postgres
 author: "Bernhard Weitzhofer (@b6d)"
 """
 
@@ -254,7 +256,7 @@ except ImportError:
 # import module snippets
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.database import pg_quote_identifier
-from ansible.module_utils._text import to_native, to_text
+from ansible.module_utils._text import to_native
 
 
 VALID_PRIVS = frozenset(('SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE',
@@ -476,7 +478,7 @@ class Connection(object):
             for obj in objs:
                 try:
                     f, args = obj.split('(', 1)
-                except:
+                except Exception:
                     raise Error('Illegal function signature: "%s".' % obj)
                 obj_ids.append('"%s"."%s"(%s' % (schema_qualifier, f, args))
         elif obj_type in ['table', 'sequence']:
@@ -553,7 +555,8 @@ def main():
             unix_socket=dict(default='', aliases=['login_unix_socket']),
             login=dict(default='postgres', aliases=['login_user']),
             password=dict(default='', aliases=['login_password'], no_log=True),
-            ssl_mode=dict(default="prefer", choices=['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full']),
+            ssl_mode=dict(default="prefer", choices=['disable', 'allow', 'prefer', 'require',
+                          'verify-ca', 'verify-full']),
             ssl_rootcert=dict(default=None)
         ),
         supports_check_mode=True

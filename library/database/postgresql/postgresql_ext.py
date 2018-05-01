@@ -57,11 +57,13 @@ options:
     default: present
     choices: [ "present", "absent" ]
 notes:
-   - The default authentication assumes that you are either logging in as or sudo'ing to the C(postgres) account on the host.
-   - This module uses I(psycopg2), a Python PostgreSQL database adapter. You must ensure that psycopg2 is installed on
-     the host before using this module. If the remote host is the PostgreSQL server (which is the default case), then PostgreSQL must also be installed
-     on the remote host. For Ubuntu-based systems, install the C(postgresql), C(libpq-dev), and C(python-psycopg2) packages on the remote host before using
-     this module.
+   - The default authentication assumes that you are either logging in as or sudo'ing to the
+     C(postgres) account on the host.
+   - This module uses I(psycopg2), a Python PostgreSQL database adapter. You must ensure that
+     psycopg2 is installed on the host before using this module. If the remote host is the
+     PostgreSQL server (which is the default case), then PostgreSQL must also be installed
+     on the remote host. For Ubuntu-based systems, install the C(postgresql), C(libpq-dev),
+     and C(python-psycopg2) packages on the remote host before using this module.
 requirements: [ psycopg2 ]
 author: "Daniel Schep (@dschep)"
 '''
@@ -99,6 +101,7 @@ def ext_exists(cursor, ext):
     cursor.execute(query, {'ext': ext})
     return cursor.rowcount == 1
 
+
 def ext_delete(cursor, ext):
     if ext_exists(cursor, ext):
         query = "DROP EXTENSION \"%s\"" % ext
@@ -106,6 +109,7 @@ def ext_delete(cursor, ext):
         return True
     else:
         return False
+
 
 def ext_create(cursor, ext):
     if not ext_exists(cursor, ext):
@@ -119,6 +123,7 @@ def ext_create(cursor, ext):
 # Module execution.
 #
 
+
 def main():
     module = AnsibleModule(
         argument_spec=dict(
@@ -130,7 +135,7 @@ def main():
             ext=dict(required=True, aliases=['name']),
             state=dict(default="present", choices=["absent", "present"]),
         ),
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     if not postgresqldb_found:
@@ -145,13 +150,13 @@ def main():
     # check which values are empty and don't include in the **kw
     # dictionary
     params_map = {
-        "login_host":"host",
-        "login_user":"user",
-        "login_password":"password",
-        "port":"port"
+        "login_host": "host",
+        "login_user": "user",
+        "login_password": "password",
+        "port": "port"
     }
-    kw = dict( (params_map[k], v) for (k, v) in module.params.items()
-              if k in params_map and v != '' )
+    kw = dict((params_map[k], v) for (k, v) in module.params.items()
+              if k in params_map and v != '')
     try:
         db_connection = psycopg2.connect(database=db, **kw)
         # Enable autocommit so we can create databases
