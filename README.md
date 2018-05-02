@@ -11,4 +11,4 @@ really new tag 2.3.4
 License
 -------
 
-BSD
+[GNU General Public License v3.0](./LICENSE)
