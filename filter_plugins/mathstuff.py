@@ -140,7 +140,8 @@ def rekey_on_member(data, key, duplicates='error'):
     value would be duplicated or to overwrite previous entries if that's the case.
     """
     if duplicates not in ('error', 'overwrite'):
-        raise errors.AnsibleFilterError("duplicates parameter to rekey_on_member has unknown value: {0}".format(duplicates))
+        raise errors.AnsibleFilterError("duplicates parameter to rekey_on_member has unknown "
+                                        "value: {0}".format(duplicates))
 
     new_obj = {}
 
@@ -166,7 +167,8 @@ def rekey_on_member(data, key, duplicates='error'):
         # minimun contain {key: key_elem}
         if new_obj.get(key_elem, None):
             if duplicates == 'error':
-                raise errors.AnsibleFilterError("Key {0} is not unique, cannot correctly turn into dict".format(key_elem))
+                raise errors.AnsibleFilterError("Key {0} is not unique, cannot correctly turn into "
+                                                "dict".format(key_elem))
             elif duplicates == 'overwrite':
                 new_obj[key_elem] = item
         else:
