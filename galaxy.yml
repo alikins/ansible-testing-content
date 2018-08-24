@@ -1,0 +1,5 @@
+namespace: "testing"
+name: "ansible-testing-content"
+version: "1.3.0"
+author: "Ansible Galaxy Team"
+license: "GPLv3"
